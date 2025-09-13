@@ -1,7 +1,7 @@
 from api.models.entities.user_entity import UserEntity
 from sqlalchemy.orm import Session
-from api.models.schemas.user_schema import UpdateUserDTO
-from api.services.crypto_service import hash_password
+
+from datetime import datetime
 
 class UserRepository:
     def __init__(self, db: Session):
@@ -26,7 +26,7 @@ class UserRepository:
         return self.db.query(UserEntity).filter(UserEntity.email == email).first()
 
     def create(self, user: UserEntity) -> UserEntity:
-        user.password = hash_password(user.password)
+        user.created_at = datetime.now()
 
         self.db.add(user)
         self.db.commit()
@@ -48,12 +48,8 @@ class UserRepository:
         self.db.refresh(user)
         return user
 
-    def update_user(self, user: UserEntity, dto: UpdateUserDTO) -> UserEntity:
-        if dto.name != None :
-            user.name = dto.name
-
-        if dto.password != None :
-            user.password = hash_password(dto.password)
+    def update(self, user: UserEntity) -> UserEntity:
+        user.update_at = datetime.now()
 
         self.db.commit()
         self.db.refresh(user)

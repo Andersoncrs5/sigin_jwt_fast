@@ -10,6 +10,7 @@ from api.models.entities.user_entity import UserEntity
 from api.services.jwt_service import *
 from api.services.crypto_service import verify_password
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from api.utils.res.responses_http import *
 
 app_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -28,9 +29,9 @@ bearer_scheme = HTTPBearer()
 def register(dto: CreateUserDTO, user_service: UserService = Depends(get_user_service)):
     if user_service.exists_by_email(dto.email) == True:
         return JSONResponse(
-            status_code=409,
+            status_code=status.HTTP_409_CONFLICT,
             content=dict(ResponseBody[None](
-                code=409,
+                code=status.HTTP_409_CONFLICT,
                 message="Email already in use",
                 status=False,
                 body=None
@@ -65,10 +66,7 @@ def register(dto: CreateUserDTO, user_service: UserService = Depends(get_user_se
     status_code=200,
     response_model=ResponseBody[Tokens],
     responses={
-        401: {
-            "model": ResponseBody[None],
-            "description": "Login invalid"
-        }
+        401: responses_401
     }
     )
 def login(dto: LoginDTO, user_service: UserService = Depends(get_user_service)):
@@ -117,9 +115,8 @@ def login(dto: LoginDTO, user_service: UserService = Depends(get_user_service)):
     response_model=ResponseBody[None],
     status_code=200,
     responses={
-        401: {
-            "model": ResponseBody[None]
-        }
+        401: responses_401,
+        404: responses_404_user
     }
     )
 def revoke(
@@ -143,10 +140,10 @@ def revoke(
     user = user_service.get_by_id(user_id)
     if user is None:
         return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_404_NOT_FOUND,
             content=dict(ResponseBody[None](
-                code=status.HTTP_401_UNAUTHORIZED,
-                message="You are not authorized",
+                code=status.HTTP_404_NOT_FOUND,
+                message="User not found",
                 status=False,
                 body=None
             ))
@@ -159,7 +156,7 @@ def revoke(
         content=dict(ResponseBody[None](
             code=status.HTTP_200_OK,
             message="Bye Bye",
-            status=False,
+            status=True,
             body=None
         ))
     )
@@ -169,22 +166,14 @@ def revoke(
     status_code=200,
     response_model=ResponseBody[Tokens],
     responses={
-        401: {
-            "model": ResponseBody[None],
-            "description": "Login invalid"
-        },
-        404: {
-            "model": ResponseBody[None],
-            "description": "User not found"
-        }
+        401: responses_401,
+        404: responses_404_user
     }
 )
 def refresh_token(
     refresh_token: str,
     user_service: UserService = Depends(get_user_service),
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     ):
-    token = valid_credentials(credentials)
     
     check = decode_token(refresh_token)
     if check is None:
@@ -198,7 +187,7 @@ def refresh_token(
             ))
         )
 
-    user_id = extract_user_id(token)
+    user_id = extract_user_id(refresh_token)
     if user_id is None:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -238,4 +227,3 @@ def refresh_token(
             body=dict(tokens)
         ))
     )
-

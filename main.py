@@ -6,7 +6,9 @@
 import logging
 from fastapi import FastAPI
 from api.controllers import auth_controller
+from api.controllers import user_controller
 from api.configs.db.database import create_tables
+from contextlib import asynccontextmanager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,8 +18,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-@app.on_event("startup")
-def start_up():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up the application...")
+    
     create_tables()
+    yield
+    logger.info("Shutting down the application...")
 
 app.include_router(auth_controller.app_router)
+app.include_router(user_controller.app_router)

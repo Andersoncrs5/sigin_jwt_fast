@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from api.models.entities.user_entity import UserEntity
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
+from fastapi import Header, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials
 
 load_dotenv()
 
@@ -62,3 +64,24 @@ def extract_email(token: str) -> str | None:
     if payload and "email" in payload:
         return payload["email"]
     return None
+
+def valid_credentials(creden: HTTPAuthorizationCredentials) -> str:
+    scheme = creden.scheme
+    if scheme != "Bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header invalid"
+        )
+    
+    token = creden.credentials
+
+    token_valided = decode_token(token)
+
+    if token_valided is None :
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization header invalid"
+        )
+
+    return token
+    
